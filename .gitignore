@@ -1,0 +1,12 @@
+# Virtual environment
+venv/
+# Database
+*.sqlite3
+# Environment variables
+. env
+# PyCharm/VS Code
+.idea/ . vscode/
+# Python files
+__pycache
+_/
+*.рус
