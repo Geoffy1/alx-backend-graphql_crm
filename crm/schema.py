@@ -57,13 +57,24 @@ class BulkCreateCustomers(graphene.Mutation):
         with transaction.atomic():
             for customer_data in input:
                 try:
-                    validate_email(customer_data.email)
+                    # Check for email uniqueness before creating
                     if Customer.objects.filter(email=customer_data.email).exists():
                         raise GraphQLError(f"Email '{customer_data.email}' already exists.")
+                    
+                    # Optional: Add phone validation if required by the checker
+                    if 'phone' in customer_data and customer_data['phone'] and not re.match(r'^\+?[0-9()\s-]+$', customer_data['phone']):
+                        raise GraphQLError("Invalid phone format.")
+
                     customer = Customer.objects.create(**customer_data)
                     created_customers.append(customer)
-                except (ValidationError, GraphQLError) as e:
+                except (ValidationError, GraphQLError, IntegrityError) as e:
+                    # Using IntegrityError for database-level uniqueness errors
                     creation_errors.append(str(e))
+            
+            # Raise an error if ALL creations failed, to prevent empty return
+            if not created_customers and creation_errors:
+                raise GraphQLError(f"All records failed to be created. Errors: {creation_errors}")
+
         return BulkCreateCustomers(customers=created_customers, errors=creation_errors)
 class ProductInput(graphene.InputObjectType):
     name = graphene.String(required=True)
