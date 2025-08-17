@@ -2,6 +2,7 @@
 import graphene
 from graphene_django.types import DjangoObjectType
 from graphene_django.filter import DjangoFilterConnectionField
+from graphene_django.filter.fields import DjangoFilterConnectionField
 from graphql import GraphQLError
 from django.core.exceptions import ValidationError
 from django.db import transaction
@@ -14,14 +15,20 @@ class CustomerType(DjangoObjectType):
     class Meta:
         model = Customer
         fields = "__all__"
+        # Add interfaces to support relay Node
+        interfaces = (graphene.relay.Node,)
+
 class ProductType(DjangoObjectType):
     class Meta:
         model = Product
         fields = "__all__"
+        interfaces = (graphene.relay.Node,)
+
 class OrderType(DjangoObjectType):
     class Meta:
         model = Order
         fields = "__all__"
+        interfaces = (graphene.relay.Node,)
 # --- Mutations ---
 class CustomerInput(graphene.InputObjectType):
     name = graphene.String(required=True)
@@ -101,7 +108,23 @@ class Mutation(graphene.ObjectType):
     create_order = CreateOrder.Field()
 # --- Queries with Filtering & Sorting ---
 class Query(graphene.ObjectType):
+    node = graphene.relay.Node.Field() # Add the Node field for relay
     hello = graphene.String(default_value="Hello, GraphQL!")
-    all_customers = DjangoFilterConnectionField(CustomerType, filterset_class=CustomerFilter, order_by=graphene.List(graphene.String))
-    all_products = DjangoFilterConnectionField(ProductType, filterset_class=ProductFilter, order_by=graphene.List(graphene.String))
-    all_orders = DjangoFilterConnectionField(OrderType, filterset_class=OrderFilter, order_by=graphene.List(graphene.String))
+
+    # Queries with Filtering & Sorting
+    # The ConnectionField is now compatible with the Node-based types
+    all_customers = DjangoFilterConnectionField(
+        CustomerType,
+        filterset_class=CustomerFilter,
+        order_by=graphene.List(graphene.String)
+    )
+    all_products = DjangoFilterConnectionField(
+        ProductType,
+        filterset_class=ProductFilter,
+        order_by=graphene.List(graphene.String)
+    )
+    all_orders = DjangoFilterConnectionField(
+        OrderType,
+        filterset_class=OrderFilter,
+        order_by=graphene.List(graphene.String)
+    )
